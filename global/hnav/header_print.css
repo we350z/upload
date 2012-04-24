@@ -1,0 +1,39 @@
+
+
+div.prnt {
+position: absolute;
+top: 100px;
+left: 5px;
+
+}
+
+.noPrint{
+display:none;
+}
+
+
+#header {
+background: none;
+}
+
+#header .print{
+	display: inline;
+	position: absolute;
+	left: 80px;
+	top:20px;
+	font-weight:bold;
+	font-size:16pt;
+}
+
+#hdrlogo{
+background: none;
+}
+
+#hdrlinks ul, li, a {
+background: none !important;
+color:#000 !important;
+}
+
+#hdrlinks .signOff{
+background: none; 
+}

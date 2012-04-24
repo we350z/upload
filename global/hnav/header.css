@@ -1,0 +1,83 @@
+/* ================= Header ======================= */
+#header {
+	border-left:1px solid white;
+	height:66px;
+	font-size:12px;
+	position:relative;
+	background:url(images/header_bg.gif) repeat-x bottom;
+	/*min-width:760px;*/
+ }
+#hdrlogo {
+	position:absolute;
+	top:0;
+	left:0;
+	width:419px;
+}
+#hdrlinks ul {
+	position:absolute;
+	left:420px;
+	top:20px;
+	background:url(images/gray_button_left.gif) no-repeat left top;
+	margin:0;
+	padding:0;
+	text-align:center;
+	}
+#hdrlinks li {
+	list-style-type:none;
+	float:left;
+	background:url(images/gray_button_breaker.gif) no-repeat right top;
+	}
+#hdrlinks a {
+	font-size:12px;
+	display:block;
+	text-decoration:none;
+	font-weight:bold;
+	padding:3px 6px 6px 6px;
+	}
+#hdrlinks li a {
+	color:#000;
+	}
+#hdrlinks li.left a {
+	padding-left:13px;
+	}
+#hdrlinks li a.right {
+	padding-right:13px;
+	background:url(images/gray_button_right.gif) no-repeat right top;
+	}
+#hdrlinks .signOff {
+	position:absolute;
+	top:20px;
+	right:15px;
+	background:url(images/signoff_left.gif) no-repeat left top;
+	}
+#hdrlinks a.signOffButton {
+	position:relative;
+	color:#fff;
+	padding-left:30px;
+	padding-right:10px;
+	background:url(images/signoff_right.gif) no-repeat right top;
+	}
+
+#header  .skipnav {
+	margin:0;
+	height:1px;
+	overflow:hidden;
+}
+
+#header .skipnav a {
+	display:block;
+	height:1px;
+	overflow:hidden;
+	position:absolute;
+	width:62px;
+	z-index:500;
+}
+
+#header .skipnav a:active, .skipnav a:focus {
+	overflow:visible;
+	height:auto;
+	background-color:#c00;
+}
+#header .print {
+	display:none
+}

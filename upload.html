@@ -1,0 +1,183 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"><!-- force IE standards to avoid "Quirks Mode" -->
+<html>
+  <head>
+    <script type="text/javascript" src="../../../../build/yui/yui.js"></script>
+    <link rel="stylesheet" href="global/main.css" type="text/css">
+    <link rel="stylesheet" href="global/hnav/header.css" type="text/css">
+    <link rel="stylesheet" href="global/print.css" type="text/css" media="print">
+    <link rel="stylesheet" href="global/hnav/header_print.css" type="text/css" media="print">
+	<!-- Prevent IE from caching -->
+    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <title>
+      File Upload - Select File
+    </title>
+  </head>
+  <body>
+    <table id="PageHeader" width="100%" border="0" cellspacing="0" cellpadding="0">
+      <tr>
+        <td>
+          <div id="header">
+            <div id="hdrlogo">
+              <img src="global/hnav/images/logo.gif" width="64" height="64" border="0">
+            </div>
+            <h1 class="print">
+              Upload
+            </h1>
+            <div id="hdrlinks">
+              <div class="signOff"></div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    </table>
+    <div id="content">
+      <div id="contentContainer">
+        <div id="sending_file">
+          <div class="contentMargins">
+            <div id="ProgressDiv" style="DISPLAY: none;Z-INDEX: 1; WIDTH: 100%;">
+              <a id="buffera" target="buffer" href="#"></a>
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" id="ProgressPageSelf" name="ProgressPageSelf">
+                <tr>
+                  <td>
+                    <div id="ProgressMessage">
+                      <h1>
+                        Sending File
+                      </h1>
+                      <p>
+                        Your file is in transit, details are provided below.<br>
+                        <br>
+                        <strong class="red">Important:</strong> Please wait for a confirmation page before closing this window or your upload may be interrupted.<br>
+                        <br>
+                        Use the <strong>Stop Transfer</strong> button to stop the transfer.
+                      </p><br>
+                    </div>
+                    <div class="greyBox">
+                      <h2>
+                        File Upload Progress Details
+                      </h2>
+                      <div class="uploadStatus">
+                        <span id="BAR" style="width: 50%" class="statusBar"> </span>
+                      </div>
+                      <div class="uploadRemain1">
+                        0%
+                      </div>
+                      <div class="uploadRemain2">
+                        50%
+                      </div>
+                      <div class="uploadRemain3">
+                        100%
+                      </div>
+                      <div class="fillerFive">
+                         
+                      </div>
+                      <div class="left2col">
+                        File Path &amp; Name:
+                      </div>
+                      <div class="right2col">
+                        <strong id="FILENAME"></strong>
+                      </div>
+                      <div class="filler">
+                         
+                      </div>
+                      <div class="left2col">
+                        Estimated Time Remaining:
+                      </div>
+                      <div class="right2col">
+                        <strong id="TIME_LEFT"></strong>
+                      </div>
+                      <div class="filler">
+                         
+                      </div>
+                      <div class="left2col">
+                        Transfer Rate:
+                      </div>
+                      <div class="right2col">
+                        <strong id="RATE"></strong>
+                      </div>
+                      <div class="filler">
+                         
+                      </div>
+                      <div class="left2col">
+                        Status:
+                      </div>
+                      <div class="right2col">
+                        <strong id="STATUS_MESSAGE"></strong>
+                      </div>
+                      <div class="filler">
+                         
+                      </div>
+                    </div>
+                    <div class="fillerFive">
+                       
+                    </div>
+                    <div id="cancelBtn"></div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div id="select_files">
+          <div class="contentMargins">
+            <div id="UploadDiv" style="Z-INDEX: 2">
+              <div id="UploadPageHeader">
+                <h1>
+                  Select Files
+                </h1>
+                <table id="UploadPageHeader" width="100%" border="0" cellspacing="0" cellpadding="0">
+                  <tr>
+                    <td>
+                      <p>
+                        Select <strong>Browse</strong> and choose a file from your local drive for uploading. You may select as many as 5 separate files.<br>
+                        <br>
+                        Click <strong>Send</strong> to start uploading the files.</p>
+                      <p style="font-family:Arial;font-size:11px;color:#666666">
+                        <br>
+                        Note: Uploads vary depending on file size and connection speed. Larger files and slower connections will result in longer upload times.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </div><br>
+              <!-- start YUI uploader widet -->
+              <div id="pageTitle"></div><br>
+              <div id="fileupload"></div>
+              <div id="uploadinfo"></div>
+              <div id="fileselection"></div><br>
+              <div id="chooseFileBtn"></div>
+              <div id="clearAllBtn"></div>
+              <div id="submitUploadBtn"></div><script type="text/javascript" src="upload.js"></script>
+              <!-- end YUI uploader widget -->	
+              <table id="UploadPageHeader" width="100%" border="0" cellspacing="0" cellpadding="0">
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="fillerThirty">
+           
+        </div>
+      </div>
+      <div id="PageFooter">
+        <div class="contentBottom">
+          <div class="contentBottomRight">
+             
+          </div>
+        </div>
+        <table width="100%" border="0" cellspacing="0" cellpadding="0">
+          <tr>
+            <td>
+              <div class="footer">2012 <a href="http://znwd.net">ZNWD</a></div>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <img src="assets/spacer.gif" width="500" height="1">
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </body>
+</html>
