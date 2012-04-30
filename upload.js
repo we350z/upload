@@ -1,12 +1,3 @@
-// hide "Stop Transfer", "Clear All", "Send" buttons at first opportunity
-document.getElementById("submitUploadBtn").style.display = "none";
-document.getElementById("cancelBtn").style.display = "none";
-document.getElementById("clearAllBtn").style.display = "none";
-
-// parameters passed in
-var an = "app_name";
-//var redirect_url; // application hosted redirect url support
-
 // Create a YUI instance and load appropriate modules
 YUI({
     base: '../../../../build/',
@@ -14,13 +5,71 @@ YUI({
     filter: 'raw',
     debug: true,
     useBrowserConsole: true
-}).use('console', 'io-base', 'node', 'uploader', 'uploader-html5', function(Y) {
+}).use('console', 'io-base', 'node', 'uploader', 'uploader-flash', 'uploader-html5', function(Y){
 
+// hide "Stop Transfer", "Clear All", "Send" buttons at first opportunity
+Y.one("#uploadBtn").hide();
+Y.one("#cancelBtn").hide();
+Y.one("#clearAllBtn").hide();
 
+// IE hash title fix
+if (Y.UA.ie > 0) {
+	var originalTitle = document.title.split("#")[0];    
+	document.attachEvent('onpropertychange', function (evt) {
+	    if(evt.propertyName === 'title' && document.title !== originalTitle) {
+	        setTimeout(function () {
+	           document.title = originalTitle;
+	        }, 1);
+	    }
+	});
+}
+
+//// variables
+
+// input variables
+
+// application name
+var an = "app_name";
+// application hosted redirect url support
+var redirect_url; 
+
+// validation variables
+
+// illegal file extensions list
+var dis_ext = "com|exe|vbs|js|htm|html|dll|ocx|asp|jsp|bat|app|asf|avi|cda|ceo|eml|fxp|grp|hlp|lnk|m1v|mdb|mde|mid|midi|mov|mp2|mp3|mpa|mpe|mpeg|mpg|otf|prg|rmi|swf|url|vbe|wav|wm|wma|wmv";
+// maximum number of files
+var max_nf = 5;
+// minimum file size (bytes) - must be greater than
+var min_size = 1
+// maximum file size (bytes) - must be less than
+var max_size = 26214400;
+// maximum aggregate upload size (bytes) - must be less than
+var maxUploadSize = 26214400;
+
+// uploader control variables
+
+// array to hold file list variables (for clearing file list)
+var fileList = [];
+// array to hold post variables 
+var postVars = [];
+// define myuploader control object
+var myuploader;
+// start time variable for transfer rate and ETA
+var startTime;
+
+// button variables
+
+// clear all button style
+var clearAllBtnStyle;
+// upload button style
+var uploadBtnStyle;
+
+//// functions
+
+// clear a single file
 function clearFile(position) {
-	// this function will remove a specific file ID from the file list array by position
-	// TO:DO remove POST variable array element and redim
-	//postVars = [];
+	// clear POST variable array element
+	postVars = [];
 	// declare an array for the temporary (working) file list
 	fileList = [];
 	// get the file list from the uploader
@@ -33,17 +82,17 @@ function clearFile(position) {
 	drawFileList();
 	// remove "Clear All" button
 	if (fileList.length < 1) {
-		document.getElementById("clearAllButton").style.display = "none";
-		document.getElementById("clearAllBtn").style.display = "none";	
+		Y.one("#clearAllButton").hide();
+		Y.one("#clearAllBtn").hide();
 	}
 }
 
+// clear all files
 function clearFileList() {
 	// hide "Clear All" and "Send" button
-	document.getElementById("clearAllButton").style.display = "none";
-	document.getElementById("clearAllBtn").style.display = "none";
-	document.getElementById("submitUploadBtn").style.display = "none";
-
+	Y.one("#clearAllButton").hide();
+	Y.one("#clearAllBtn").hide();
+	Y.one("#uploadBtn").hide();
 	// clear file list output
 	out.setContent("");
 	// clear POST variables array
@@ -56,11 +105,21 @@ function clearFileList() {
 	setTimeout(1000);
 };
 
+// function to handle the response data for HTTP GET calls 
+function complete(id, o, args) {
+	var id = id; // Transaction ID.
+	var data = o.responseText; // Response data.
+	var args = args[1]; // 'ipsum'.
+	Y.one("#UploadDiv").setContent(data);
+};
+
+// draw file list
 function drawFileList() {
+	out.setContent("");
 	// clear POST variables array
 	postVars = [];
 	var showClearAll = false;
-	
+
 	// clear file list output
 	out.setContent([
 		'<table ID=UploadPageSelf width=100% border=0 cellspacing=0 cellpadding=0>', 
@@ -72,14 +131,13 @@ function drawFileList() {
 			'<tr>', 
 				'<td>'
 	].join(''));
-	
-	
+
 	Y.each(myuploader.get("fileList"), function (value, fileNum) {
 		var fileId = value.get("id");
 		var fileName = value.get("name");
 		var fileSize = Math.floor(value.get("size") / 1024);
 		out.append([
-					'<div class=fileNum id=File', fileId, '>',
+					'<div class=fileNum id=', fileId, '>',
 						'<label for=file>File', (fileNum + 1), ':</label></div>',
 						'<div class=fileName>', fileName, '</div>&nbsp;', 
 				'</td>', 
@@ -98,40 +156,20 @@ function drawFileList() {
 		// TO DO: consider adding TOTAL filesize
 	});
 	myuploader.set("postVarsPerFile", postVars);
-	// run validate files function to provide instant feedback
-	// TO DO: do not allow illegal files to be added to the file list
+	// run validate files function to prevent illegal files from being added and provided instant user feedback
 	validateFiles();	
 };
 
-function updateFileList() {
-	var fileNum = 0;
-	Y.each(myuploader.get("fileList"), function (value) {
-		fileNum++
-	});
-	if (fileNum > 1) {
-		document.getElementById("submitUploadBtn").style.display = "block";
-	}
-	else {
-		document.getElementById("submitUploadBtn").style.display = "none";
-	}
-};
-
-// Define a function to handle the response data for HTTP GET calls 
-function complete(id, o, args) {
-	var id = id; // Transaction ID.
-	var data = o.responseText; // Response data.
-	var args = args[1]; // 'ipsum'.
-	document.getElementById('UploadDiv').innerHTML = data;
-};
-
-// upon cancellation request cancellation page from the IS.
+// upon cancellation request cancellation page from the backend
 function getCancellation() {
 	// clear divs
 	out.one("");
 	// hide legacy progress bar
-	document.getElementById('ProgressDiv').style.display = "none";
+	Y.one("#ProgressDiv").hide();
 	// after upload is complete remove "Stop Transfer" button
-	document.getElementById("stopTransferButton").style.display = "none";
+	Y.one("#stopTransferButton").hide();
+
+	// clear out divs
 	Y.one("#uploadinfo").setContent("");
 
 	// AJAX call to backend cancellation service
@@ -145,18 +183,21 @@ function getCancellation() {
 	var request = Y.io("cancel.html");
 };
 
-// upon successfull completion of all uploads request confirmation page from the IS
+// upon successfull completion of all uploads request confirmation page from the backend
 function getConfirmation() {
 	// clear divs
 	out.one("");
 	// after upload is complete remove "Stop Transfer" button
-	document.getElementById("stopTransferButton").style.display = "none";
+	Y.one("#stopTransferButton").hide();
+
+	// clear out divs
 	Y.one("#clearAllBtn").setContent("");
 	Y.one("#uploadinfo").setContent("");
 	Y.one("#pageTitle").setContent("");
+
 	// Show indeterminite progress bar while waiting for backend to respond - this can happen in scenarios where the backend is taking longer to process then normal
-	document.getElementById("fileselection").style.display = "block";
-	Y.one("#fileselection").setContent("<IMG SRC=assets/indefinite_fast.gif><BR><IMG SRC=assets/indefinite_fast_text.gif>");
+	Y.one("#fileselection").show();
+	Y.one("#fileselection").setContent("<IMG SRC=poc/assets/indefinite_fast.gif><BR><IMG SRC=poc/assets/indefinite_fast_text.gif>");
 
 	// AJAX call to backend confirmation service
 
@@ -189,56 +230,103 @@ function getConfirmation() {
 		minutes = "0" + minutes
 	}
 	
-	if(hours > 11){
+	if (hours > 11) {
 		meridian = "PM";
-	} else {
+	} 
+
+	else {
 		meridian = "AM";
 	}
 
-	var confirmation = "<table width=100% border=0 cellspacing=0 cellpadding=0><tr><td><div class=printHeader><h1>File Upload - Confirmation</h1><span class=right><a href=javascript:window.print()><img src=assets/icons/print.gif width=17 height=19 border=0 alt=Print /></a> <a href=javascript:window.print()>Print</a></span></div><div class=fillerFive>&nbsp;</div>			Your files have been uploaded successfully.			They will be processed shortly.<div class=fillerFive>&nbsp;</div><div class=greyBox><div class=left4col1>Company <abbr title=Identification>ID</abbr>:</div><div class=left4col2><strong>test_company_id</strong></div><div class=left4col3>Transfer Date:</div><div class=left4col4><strong>" + month + "/" + day + "/" + year + "</strong></div><div class=filler>&nbsp;</div><div class=left4col1>User <abbr title=Identification>ID</abbr>:</div><div class=left4col2><strong>test</strong></div><div class=left4col3>Transfer Time:</div><div class=left4col4><strong>" + hours + ":" + minutes + " " + meridian + " PDT</strong></div><div class=filler>&nbsp;</div></div><div class=fillerFive>&nbsp;</div><div class=summaryBox><h2>Transfer Summary</h2><ul>";
+	var confirmation = ([
+		'<table width=100% border=0 cellspacing=0 cellpadding=0>', 
+			'<tr>',
+				'<td>',
+					'<div class=printHeader>',
+						'<h1>File Upload - Confirmation</h1>', 
+							'<span class=right>',
+								'<a href=javascript:window.print()>', 
+									'<img src=poc/assets/icons/print.gif width=17 height=19 border=0 alt=Print />', 
+								'</a>', 
+								'<a href=javascript:window.print()>Print</a>', 
+							'</span>',
+					'</div>',
+					'<div class=fillerFive>&nbsp;</div>',
+						'Your files have been sent successfully.  They will be processed shortly.',
+						'<div class=fillerFive>&nbsp;</div>',
+						'<div class=greyBox>',
+							'<div class=left4col1>Company <abbr title=Identification>ID</abbr>:',
+						'</div>',
+						'<div class=left4col2><strong>test_company_id</strong></div>',
+						'<div class=left4col3>Transfer Date:</div>',
+						'<div class=left4col4><strong>', month, '/', day, '/', year, '</strong></div>',
+						'<div class=filler>&nbsp;</div>',
+						'<div class=left4col1>User <abbr title=Identification>ID</abbr>:</div>',
+						'<div class=left4col2><strong>test</strong></div>',
+						'<div class=left4col3>Transfer Time:</div>',
+						'<div class=left4col4><strong>', hours, ':',  minutes, ' ', meridian, ' PDT</strong></div>',
+						'<div class=filler>&nbsp;</div>',
+					'</div>',
+					'<div class=fillerFive>&nbsp;</div>',
+					'<div class=summaryBox>',
+						'<h2>Transfer Summary</h2>',
+						'<ul>'
+	].join(''));
 
 	var rowColor = "even";
 	
 	Y.each(myuploader.get("fileList"), function (value) {
 		var fileId = value.get("id");
 		var fileName = value.get("name");
-		confirmation = confirmation + "<li class=" + rowColor + "><div class=left2col><img src=assets/icons/ok.gif width=22 height=24 alt=OK /></div><div class=right2col>" + fileName + "<br /><Strong>Successful</Strong> - Confirmation #: " + fileId + " 								</div><div class=filler>&nbsp;</div></li>"
+		confirmation = confirmation + ([
+							'<li class=', rowColor, '>',
+								'<div class=left2col>',
+									'<img src=poc/assets/icons/ok.gif width=22 height=24 alt=OK />',
+								'</div>',
+								'<div class=right2col>', fileName, '<br />',
+									'<Strong>Successful</Strong> - Confirmation #: ', fileId, 
+								'</div>',
+								'<div class=filler>&nbsp;</div>',
+							'</li>'
+		].join(''));
+		
 		if (rowColor == "even") {
 			rowColor = "odd";
 		}
+		
 		else if (rowColor =="odd") {
 			rowColor = "even";
 		}
 	});
 	
-	confirmation = confirmation + "</ul></div>  <!--summaryBox--><div class=fillerTen>&nbsp;</div><p><a href=uploader-dev.html>File Upload Home</a></p><div class=fillerTen>&nbsp;</div></div>   <!--contentMargins--></div> <!--upload confirmation--></div> <!--contentContainer--><div class=contentBottom><!--<div class=contentBottomRight>&nbsp;</div>--></div></div><!--content--></td></tr></table>"
-	document.getElementById('UploadDiv').innerHTML = confirmation;	
-
+	confirmation = confirmation + ([
+							'</ul>',
+							'</div>',
+							'<div class=fillerTen>&nbsp;</div>',
+								'<p><a href=upload-dev.html>File Upload Home</a></p>',
+								'<div class=fillerTen>&nbsp;</div>',
+							'</div>',
+						'</div>',
+					'</div>',
+					'<div class=contentBottom></div>',
+				'</div>',
+				'</td>',
+			'</tr>',
+		'</table>'
+		].join(''));
+		Y.one("#UploadDiv").setContent(confirmation);
 	}, 3000);
 };
 
-// FUS unique client-side request id generation function this is sent to backend for async file upload aggregation before processing
+// unique client-side request id generation function this is sent to backend for async file upload aggregation before processing
 function getUniqueId() {
 	// generate a random number
 	req = Y.guid();
 	return req;
 }
 
-// validation parameters
-
-// illegal file extensions list
-var dis_ext = ["com","exe","vbs","js","htm","html","dll","ocx","asp","jsp","bat","app","asf","avi","cda","ceo","eml","fxp","grp","hlp","lnk","m1v","mdb","mde","mid","midi","mov","mp2","mp3","mpa","mpe","mpeg","mpg","otf","prg","rmi","swf","url","vbe","wav","wm","wma","wmv"];
-// maximum number of files
-var max_nf = 5;
-// minimum file size (bytes) - must be greater than
-var min_size = 1
-// maximum file size (bytes) - must be less than
-var max_size = 26214400;
-// maximum aggregate upload size (bytes) - must be less than
-var maxUploadSize = 26214400;
-
 // perform file validations
-// NOTE: these checks should also be performed on the backend - this is just a first line of defense to conserve resources
+// NOTE: these checks are also performed on the backend - this is just a first line of defense to conserve resources
 function validateFiles() {	
 	var nf = 0;
 	var error = "";
@@ -260,41 +348,44 @@ function validateFiles() {
         }
 
         else {
-                error = error + "* " + filename + " is a 0 byte file" + "\n";
+                error = error +  "The file is empty. You tried to upload a blank file. Please send a completed file." + "\n";
                 clearFile(nf-1);
         }
 
         // check for maximum file size
         if (filesize > max_size) {
-                error = error + "* " + filename + " (" + (Math.floor(filesize / 1024)) + "KB) exceeds maximum file size limit (" + (Math.floor(max_size / 1024)) + "KB)" + "\n";
+                error = error +  filename + " (" + (Math.floor(filesize / 1024 / 1024)) + "MB) exceeds maximum file size limit (" + (Math.floor(max_size / 1024 / 1024)) + "MB)" + "\n";
                 clearFile(nf-1);
         }
                 
 		// check for illegal extensions
-        // TO DO: replace with better regular expression check
-        var len=dis_ext.length;
-        for(var i=0; i<len; i++) {
-                var extension = dis_ext[i];
-                if (filename.indexOf(extension) > 1) {
-                        error = error + filename + " has an illegal extension (." + extension + ")" + "\n" ;
-                        clearFile(nf-1);
-            }
-		}
+        var regex_ext = new RegExp(dis_ext, "i");
+		var parse_ext = regex_ext;
+		var test_ext = parse_ext.test(filename);
+
+        if (test_ext) {
+                var extension = filename.substring(filename.lastIndexOf("."));
+                error = error + 'Cannot upload files with extension"' + extension +'".' + "\n";
+                clearFile(nf-1);
+    	}
 	});
 		
 	// no files selected
 	if  (nf == 0) {
 		//error = error + ("No files selected!" + "\n");
 	}
+
+	// TO:DO do a duplicate file check
 	
 	// maximum number of files exceeded
 	if (nf > max_nf) {
-		error = error + ("* Maximum number of files exceeded - you selected " + nf + " only " + max_nf + " allowed" + "\n");
+		error = error + ("The file(s) exceed the maximum limit of " + max_nf + " files per request." + "\n");
 	}
 		
 	// maximum upload size exceeded
 	if (uploadSize > maxUploadSize) {
-		error = error + ("* Maximum upload size exceeded (" + (Math.floor(uploadSize / 1024)) + "KB) only " + (Math.floor(maxUploadSize / 1024)) + "KB allowed" + "\n");
+		error = error + "The file(s) exceed the maximum limit of " + (Math.floor(maxUploadSize / 1024 / 1024)) + " MB per request." + "\n";
+		Y.one("#uploadBtn").hide();
 	}
 
 	// if there is error output, display it to the user
@@ -305,82 +396,79 @@ function validateFiles() {
 	else {
 		// validation passed, show upload button if files exist
 		if (nf > 0) {
-			document.getElementById("submitUploadBtn").style.display = "block";
-			document.getElementById("clearAllButton").style.display = "block";
-			document.getElementById("clearAllBtn").style.display = "block";
+			Y.one("#uploadBtn").show();
+			Y.one("#clearAllButton").show();
+			Y.one("#clearAllBtn").show();
 		}
+
 		else {
-			document.getElementById("submitUploadBtn").style.display = "none";
-			document.getElementById("clearAllButton").style.display = "none";
-			document.getElementById("clearAllBtn").style.display = "none";
+			Y.one("#uploadBtn").hide();
+			Y.one("#clearAllButton").hide();
+			Y.one("#clearAllBtn").hide();
 		}
 	}
 	validations = [nf, uploadSize, error]
 	return validations;
 }
 
-// define myuploader control object
-var myuploader;
+//// setup uploader contol
 
-// buttons
+// browser feature detection to select appropriate upoad control
+
+if (Y.Uploader.TYPE != "none") {
+	myuploader = new Y.Uploader({ multipleFiles: true,
+		selectButtonLabel: 'Choose File', // for use with default SELECT_FILES_BUTTON static property
+		selectFilesButton: Y.one('#chooseFileBtn'),  // specify custom file selection DIV
+		tabIndex: "0",
+		width: "640px",
+		height: "100%",
+		swfURL: "poc/assets/flashuploader.swf?t=" + Math.random()
+	});
+}
+
+if (Y.Uploader.TYPE === "html5") {
+	Y.one("#pageTitle").setContent("Using uploader: HTML5");
+	//  adjust button positioning
+	// TO:DO move this to css
+	clearAllBtnStyle = "margin-left:565px;position:relative;bottom:49px;";
+	uploadBtnStyle = "margin-left:146px;position:relative;bottom:30px;";
+}
+
+else if (Y.Uploader.TYPE === "flash") {
+	Y.one("#pageTitle").setContent("Using uploader: Flash");
+	// adjust button positioning
+	// TO:DO move this to css
+	clearAllBtnStyle = "margin-left:565px;position:relative;bottom:33px;";
+	uploadBtnStyle = "margin-left:146px;position:relative;bottom:10px;";
+}
+
+myuploader.render("#fileselection");
+
+//// buttons
 // TO DO: move all css out of JS to CSS
+
+// setup "Clear All" button
+Y.one("#clearAllBtn").setContent("<input id='clearAllButton' type ='submit' class='redButton' value='Clear All' style='" + clearAllBtnStyle + "'>");
 
 // setup "Choose File" button
 Y.one("#chooseFileBtn").setContent("<input type='submit' class='redButton' value='Choose File' style='margin-left:146px;position:relative'>");
 Y.one("#chooseFileBtn").setStyle('width', '200px');
 
+// setup "Send" button
+Y.one("#uploadBtn").setContent("<input id='uploadButton' type='submit' class='redButton' value='Send' style='" + uploadBtnStyle + "'>");
+
 // set "Stop Transfer" button
 Y.one("#cancelBtn").setContent("<input type='button' id='stopTransferButton' class='redButton' value='Stop Transfer'>");
 
-// auto-detect browser capabilities to determine appropriate upload control - HTML5 (preferred) or Flash (fallback)
-
-// if FireFox set initialize progress bar variables
-if (Y.UA.gecko > 0) {
-	STATUS_MESSAGE = document.getElementById("STATUS_MESSAGE");
-	BAR = document.getElementById("BAR");
-	TIME_LEFT = document.getElementById("TIME_LEFT");
-	RATE = document.getElementById("RATE");
-} 
-
-// if Microsoft Internet Explorer (IE) force SWFupload Flash Uploader control
-// if FireFox force SWFuploader Flash Uploader control until HTML5 issues are resolved by YUI team
-if (Y.UA.ie > 0) {
-	// setup "Clear All" button
-	Y.one("#clearAllBtn").setContent("<input id='clearAllButton' type ='submit' class='redButton' value='Clear All' style='margin-left:565px;position:relative;bottom:29px;'>");
-	// setup "Send" button
-	Y.one("#submitUploadBtn").setContent("<input id='submitUploadButton' type='submit' class='redButton' value='Send' style='margin-left:146px;position:relative;bottom:10px;'>");
-	
-	//Y.UploaderFlash.TYPE = "flash";
-	myuploader = new Y.UploaderFlash({ 
-		boundingBox: '#fileselection',
-		contentBox: '#fileselection',
-		multipleFiles: true,
-		selectButtonLabel: 'Choose File', // for use with default SELECT_FILES_BUTTON static property
-		selectFilesButton: Y.one('#chooseFileBtn'),  // specify custom file selection DIV
-		swfURL: "assets/flashuploader.swf?t=" + Math.random(),
-		tabElements: {from: "#pageTitle", to: "#submitUploadButton"},
-		tabIndex: "0",
-		uploadURL: "upload.php",	
-		width: '640px'
-	});
-	// verbosely output on page that we are using Flash control
-	Y.one("#pageTitle").setContent("Using uploader: Flash");
-	myuploader.render("#fileselection");
 /*
-	myuploader.get('boundingBox').setStyles({
-		position: 'relative',
-		top: '-32px'
-	});
-*/
-}
+// auto-detect browser with user agent to determine appropriate upload control - HTML5 (preferred) or Flash (fallback)
 
-// any other browser use HTML5
-
-else {
+// Chrome 10+, FireFox 4+, Opera 12+, Safari 4+ use HTML5
+if (Y.UA.chrome >= 10 || Y.UA.gecko >= 4 ||  Y.UA.opera >= 12 || Y.UA.safari >= 4)  {
 	// setup "Clear All" button
-	Y.one("#clearAllBtn").setContent("<input id='clearAllButton' type ='submit' class='redButton' value='Clear All' style='margin-left:565px;position:relative;bottom:47px;'>");
+	Y.one("#clearAllBtn").setContent("<input id='clearAllButton' type ='submit' class='redButton' value='Clear All' style='margin-left:565px;position:relative;bottom:49px;'>");
 	// setup "Send" button
-	Y.one("#submitUploadBtn").setContent("<input id='submitUploadButton' type='submit' class='redButton' value='Send' style='margin-left:146px;position:relative;bottom:30px;'>");
+	Y.one("#uploadBtn").setContent("<input id='uploadButton' type='submit' class='redButton' value='Send' style='margin-left:146px;position:relative;bottom:30px;'>");
 
 	//Y.UploaderFlash.TYPE = "html5"; 
 	myuploader = new Y.UploaderHTML5({
@@ -389,14 +477,42 @@ else {
 		multipleFiles: true,
 		//selectButtonLabel: 'Choose File', // for use with default SELECT_FILES_BUTTON static property
 		selectFilesButton: Y.one('#chooseFileBtn'),  // specify custom file selection DIV
-		uploadURL: "upload.php",
+		//uploadURL: "upload.php",
 		width: '640px'
 	});
 
 	// verbosely output on page that we are using HTML5 control
 	Y.one("#pageTitle").setContent("Using uploader: HTML5");
 	myuploader.render();
+} 
+
+// all other browsers use Flash (IE 6/7/8/9, Opera 11)
+else {
+	// setup "Clear All" button
+	Y.one("#clearAllBtn").setContent("<input id='clearAllButton' type ='submit' class='redButton' value='Clear All' style='margin-left:565px;position:relative;bottom:33px;'>");
+	// setup "Send" button
+	Y.one("#uploadBtn").setContent("<input id='uploadButton' type='submit' class='redButton' value='Send' style='margin-left:146px;position:relative;bottom:10px;'>");
+	
+	//Y.UploaderFlash.TYPE = "flash";
+	myuploader = new Y.UploaderFlash({
+		// boundingBox/contentBox causes "Uncaught Error: HIERARCHY_REQUEST_ERR: DOM Exception 3"
+		//boundingBox: '#fileselection',
+		//contentBox: '#fileselection',
+		multipleFiles: true,
+		selectButtonLabel: 'Choose File', // for use with default SELECT_FILES_BUTTON static property
+		selectFilesButton: Y.one('#chooseFileBtn'),  // specify custom file selection DIV
+		swfURL: "poc/assets/flashuploader.swf?t=" + Math.random(),
+		tabElements: {from: "#pageTitle", to: "#uploadButton"},
+		tabIndex: "0",
+		//uploadURL: "upload.php",	
+		width: '640px'
+	});
+	// verbosely output on page that we are using Flash control
+	Y.one("#pageTitle").setContent("Using uploader: Flash");
+	myuploader.set("swfURL", "poc/assets/flashuploader.swf");
+	myuploader.render("#fileselection");
 }
+*/
 
 // set uploader class attributes
 
@@ -404,32 +520,14 @@ else {
 myuploader.set("multipleFiles", true);
 // newly selected files should be appended to the existing file list 
 myuploader.set("appendNewFiles", true);
-// A String specifying what should be the POST field name for the file content in the upload request. (Default: "Filedata")
+// a string specifying what should be the POST field name for the file content in the upload request. (Default: "Filedata")
 myuploader.set("fileFieldName", "File"); 
-// The number of files that can be uploaded simultaneously if the automatic queue management is used. This value can be in the range between 2 and 5. (Default: 2)
+// the number of files that can be uploaded simultaneously if the automatic queue management is used. This value can be in the range between 2 and 5. (Default: 2)
 var simLimit = 2;
 myuploader.set("simLimit", simLimit);
 
 // output variable for uploadinfo div
 var out = Y.one("#uploadinfo");
-
-// event delegate for "Clear" link
-out.delegate('click', function (ev) {
-	var position = ev.target.get('id').replace('Clear', '');
-	clearFile(position);
-}, 'a.clearLink');
-
-// initialize array to hold file list variables (for clearing file list)
-var fileList = [];
-
-// initialize global variable to store total number of files
-var nf = 0;
-
-// initialize array to hold post variables 
-var postVars = [];
-
-// initialize global variable to store total upload size
-var uploadSize = 0;
 
 // event listener for after file list changes
 myuploader.after("fileListChange", function (ev) {
@@ -440,46 +538,29 @@ myuploader.after("fileListChange", function (ev) {
 // event listener for "Clear All" button
 Y.one("#clearAllButton").on("click", function () {
 	clearFileList();
-	document.getElementById("clearAllButton").style.display = "none";
-	document.getElementById("clearAllBtn").style.display = "none";
+	Y.one("#clearAllButton").hide();
+	Y.one("#clearAllBtn").hide();
 });
 
-// output individual upload progress percentage
-// TO DO: switch to working in bytes to avoid divide by 0 issue in FF
+// output individual file upload progress percentage
 myuploader.on("uploadprogress", function (ev) {
-	var percentLoaded = Math.floor(ev.percentLoaded * 100) / 100;
-	var fileID = ev.file.get("id");
-	var currTime = new Date().getTime(); // get current time stamp for computing elapsed time
-	var fileSize = Math.floor(ev.file.get("size") / 1024); // total file size
-	var kbytesSent = Math.floor( (percentLoaded / 100) * (ev.file.get("size") / 1024) ); // KB sent so far
-	var kbytesLeft = fileSize - kbytesSent; // KB left to send
-	var elapsedTime = (currTime - startTime) * .001; // elapsed time in seconds
-	elapsedTime = Math.floor(elapsedTime * 100) / 100;
-	var xferRate = kbytesSent / elapsedTime; // transfer rate (KBps)
-	xferRate = Math.floor(xferRate * 100) / 100;
-	var eta = kbytesLeft / xferRate * 100; // estimated time remaining
-	eta = Math.floor(eta + 100) / 100;
-		
-	out.one("#" + ev.file.get("id")).setContent(ev.file.get("name") + " | " 
-				+ percentLoaded + "% | "
-				+ "[" + kbytesSent + "KB / " + fileSize + "KB] | " 
-				+ "KB Remaining: " + kbytesLeft + "KB | "
-				+ "Transfer Rate: " + xferRate + "KB/sec | "
-				+ "Estimated Time Remaining: " + eta + " sec | "
-				+ "Total Time Elapsed: " + elapsedTime + " sec"
-				
-	);		
+    out.one("#" + ev.file.get("id")).setContent(Math.floor(ev.percentLoaded) + "%");
 });
 
-// notify user when an individual upload has completed
-myuploader.on("uploadcomplete", function (ev) {
-	// shows per XHR backend response, need not display to user.  Also throws Uncaught TypeError
-	//out.one("#" + ev.file.get("id")).append("<p>DATA:<br> " + ev.data + "</p>");
-});
-            	 
-// output total upload progress percentage
-// TO DO: switch to working in bytes to avoid divide by 0 issue in FF     	 
+
+//// progress bar
+
+// if FireFox initialize progress bar variables
+if (Y.UA.gecko > 0) {
+	STATUS_MESSAGE = document.getElementById("STATUS_MESSAGE");
+	BAR = document.getElementById("BAR");
+	TIME_LEFT = document.getElementById("TIME_LEFT");
+	RATE = document.getElementById("RATE");
+}
+
+// output total file upload progress percentage	 
 myuploader.on("totaluploadprogress", function (ev) {
+	//Y.one("#totalpercent").setContent("Total upload progress: " + ev.percentLoaded);
 	var percentLoaded = Math.floor(ev.percentLoaded * 100) / 100; // get percent of total transfer
 	var currTime = new Date().getTime(); // get current time stamp for computing elapsed time
 	var kbytesSent = Math.floor( (ev.percentLoaded / 100) * (Math.floor(uploadSize / 1024)) ); // KB sent so far
@@ -493,44 +574,35 @@ myuploader.on("totaluploadprogress", function (ev) {
 
 	// draw progress bar
 	BAR.style.width = percentLoaded + "%";
-
-	// if FF outout using textContent method
-	if (Y.UA.gecko > 0) {
-		//STATUS_MESSAGE.textContent = "blah";
-		document.getElementById('STATUS_MESSAGE').textContent = "Transferring content...";
-		document.getElementById('TIME_LEFT').textContent = eta + " sec";
-		document.getElementById('RATE').textContent = xferRate + " KB/sec";
-	}
-	// all other browsers use innerText
-	else {
-		STATUS_MESSAGE.innerText = "Transferring content...";
-		TIME_LEFT.innerText = eta + " sec";
-		RATE.innerText = xferRate + " KB/sec";
-	}
-	
-	// workaround until "alluploadscomplete" event bug is fixed
-	if (ev.percentLoaded >= 95) { // FireFox may never reach 100% on individual file uploads
-		// hide legacy progress DIV
-		document.getElementById('ProgressDiv').style.display = "none";
-		// retreive confirmation page from IS
-		getConfirmation();
-	}	
+	Y.one("#STATUS_MESSAGE").setContent("Transferring content...");
+	Y.one("#TIME_LEFT").setContent(eta + " sec");
+	Y.one("#RATE").setContent(xferRate + " KB/sec");
 });
 
-// notify user when all uploads have been completed and send XHR request for confirmation
-// NOTE: due to a bug in current YUI master this event will not fire
-/*
+
+//// event listeners
+
+// event delegate for "Clear" link
+out.delegate('click', function (ev) {
+	var position = ev.target.get('id').replace('Clear', '');
+	clearFile(position);
+}, 'a.clearLink');
+
+// notify user when an individual upload has completed
+myuploader.on("uploadcomplete", function (ev) {
+ 	//out.one("#" + ev.file.get("id")).append("<p>DATA:<br> " + ev.data + "</p>");
+ 	out.one("#" + ev.file.get("id")).setContent("100%");
+}); 
+
 myuploader.on("alluploadscomplete", function (ev) {
-	Y.one("#totalpercent").setContent("<p>Upload complete!</p>");	
+ 	//Y.one("#totalpercent").setContent("<p>Upload complete!</p>");
+	// hide legacy progress DIV
+	Y.one("#ProgressDiv").hide();
+	// retreive confirmation page from backend
+	getConfirmation();		 	
 });	                                    	                                       
-*/
 
-// upload
-
-var startTime; // initialize start time variable for transfer rate and ETA
-
-// event listener for when "Send" button is clicked  
-Y.one("#submitUploadButton").on("click", function () {
+Y.one("#uploadButton").on("click", function () {
 	// get validation info
 	var validations = [];
 	validations = validateFiles();
@@ -542,44 +614,40 @@ Y.one("#submitUploadButton").on("click", function () {
 	var error = validations[2];
 	// check if file list passes validations
 	if (nf == 0 || (nf > max_nf) || error != "") {
-		// do nothing
+		// error - do not start uploading, user has been informed by validateFiles()
 	}
 	
+	// start uploading
 	else {
-		// redraw filelist to hide individual clear buttons
-		out.setContent("");
-		Y.each(myuploader.get("fileList"), function (value) {
-			var fileId = value.get("id");
-			var fileName = value.get("name");
-			var fileSize = Math.floor(value.get("size") / 1024);
-			out.append("<div id='" + fileId + "'>" + fileName + " | " + "[" + fileSize + "KB]" + "</div>");
-		});
-		// hide "Select Files" div
-		document.getElementById('fileselection').style.display = "none";		
 		// show legacy progress DIV
-		document.getElementById('ProgressDiv').style.display = "block";
+		Y.one("#ProgressDiv").show();
 		// hide legacy upload header
-		document.getElementById('UploadPageHeader').style.display = "none";
+		Y.one("#UploadPageHeader").hide();
+		// hide choose file button
+		Y.one("#chooseFileBtn").hide();
+		// hide upload button
+		Y.one("#uploadBtn").hide();
+		// hide clear all button
+		Y.one("#clearAllBtn").hide();
 		// show cancel button div
-		document.getElementById("cancelBtn").style.display = "block";
+		Y.one("#cancelBtn").show();
 		// show "File Detail" header
 		Y.one("#pageTitle").setContent("File Name(s):");
 
-		// upload all files using automatic queue manager when "Upload Files" button is clicked, form variables are sent via HTTP GET method
-		// hide "Upload Files", "Select Files" and "Clear All" buttons
-		document.getElementById("submitUploadBtn").style.display = "none";
-		document.getElementById("clearAllButton").style.display = "none";
-		// show "Stop Transfer" button
-		document.getElementById("stopTransferButton").style.display = "block";	
-		// get start time for computing eta, xfer rate, etc..
-		startTime = new Date().getTime();
-		myuploader.uploadThese(myuploader.get("fileList"), "upload.php?an=" + an + "&nf=" + nf + "&req=" + getUniqueId()), myuploader.get("postVarsPerFile");	
+		// remove clear links
+		var bodyNode = Y.one(document.body);
+		bodyNode.all('.clearLink').hide();
 
+		// record start time for calculating xfer rate and eta in progress bar
+		startTime = new Date().getTime();
+
+		// inititate upload
+		//myuploader.uploadAll("upload.php?an=app_name&nf=" + nf + "&req=" + getUniqueId());
+		myuploader.uploadThese(myuploader.get("fileList"), "upload.php?an=" + an + "&nf=" + nf + "&req=" + getUniqueId()), myuploader.get("postVarsPerFile");
 	}
 });
 
-// cancellation logic
-// event listener for when "Stop Transfer" button is clicked
+// cancellation logic - event listener for when "Stop Transfer" button is clicked
 Y.one("#stopTransferButton").on("click", function () {
 	// javascript popup confirmation to cancel file transfer(s)
 	// TO DO: consider replacing with a YUI overlay so progress bar will continue to draw
